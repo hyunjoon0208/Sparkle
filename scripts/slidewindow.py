@@ -1,3 +1,5 @@
+#! /usr/bin/env python3
+
 import cv2
 import numpy as np
 
@@ -45,8 +47,8 @@ class SlideWindow:
         cv2.polylines(out_img, [pts_right], False, (255,0,0), 1)
         #pts_center = np.array([[width/2 + 90, height], [width/2 + 90, height - 150], [width/2 - 60, height - 231], [width/2 - 60, height]], np.int32)
         #cv2.polylines(out_img, [pts_center], False, (0,0,255), 1)
-        pts_catch = np.array([[0, 340], [width, 340]], np.int32)
-        cv2.polylines(out_img, [pts_catch], False, (0,120,120), 1)
+        # pts_catch = np.array([[0, 340], [width, 340]], np.int32)
+        # cv2.polylines(out_img, [pts_catch], False, (0,120,120), 1)
 
         # indicies before start line(the region of pts_left)
         # nonzerox * 0.33 +
@@ -89,7 +91,7 @@ class SlideWindow:
         #    if nonzeroy[good_center_inds] != [] and nonzerox[good_center_inds] != []:
         #        p_cut = np.polyfit(nonzeroy[good_center_inds], nonzerox[good_center_inds], 2)
 
-        print("x_current : ", x_current)
+        # print("x_current : ", x_current)
 
         if x_current is None:
             cv2.waitKey(10)

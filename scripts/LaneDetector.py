@@ -4,7 +4,7 @@ import rospy
 import cv2
 import numpy as np
 from sensor_msgs.msg import Image, CompressedImage
-from Slidewindow import SlideWindow
+from Sparkle.scripts.slidewindow import SlideWindow
 from pidcal import PidCal
 from Preprocess import Preprocess
 
@@ -22,8 +22,12 @@ class LaneDetector:
     def callback(self, data):
         img_bgr =cv2.imdecode(np.fromstring(data.data, np.uint8),cv2.IMREAD_COLOR)
         slideing_img, steering = self.lane_detection(img_bgr)
+        if_detect, yellow = self.preprocess.find_yellow(img_bgr)
         cv2.imshow("Image window", img_bgr)
-        cv2.imshow("Slidinw window", slideing_img)
+        if if_detect:
+            cv2.imshow("yellow", yellow)
+        if slideing_img is not None:
+            cv2.imshow("Slidinw window", slideing_img)
         cv2.waitKey(1)
         print("steering : ", steering)
 
@@ -34,6 +38,7 @@ class LaneDetector:
         cv2.imshow("Slidinw window", img)
         cv2.waitKey(1)
         return img, steering
+    
 
 
 if __name__ == '__main__':
