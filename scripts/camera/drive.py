@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-
+import os, sys
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 import rospy
 import cv2
 import numpy as np
@@ -8,8 +9,7 @@ from std_msgs.msg import Float64
 from sensor_msgs.msg import Image, CompressedImage
 from slidewindow_test import SlideWindow
 from Preprocess import Preprocess
-from pidcal import PidCal
-
+from control.pidcal import PidCal
 
 class Test_drive:
     def __init__(self):
@@ -32,14 +32,21 @@ class Test_drive:
     
     def callback(self, data):
         img_bgr =cv2.imdecode(np.fromstring(data.data, np.uint8),cv2.IMREAD_COLOR)
-        slideing_img, steering = self.lane_detection(img_bgr)
-        
+        slideing_img, angle,steering = self.lane_detection(img_bgr)
+        #scaling angle to 0 ~ 180 -> 0.0 ~ 1.0
+        real_steering = angle / 180.0
+        steering /= -1.0
+        steering_mean = (real_steering + steering) / 2.0
+        print("steering : ", steering)
+        print("real_steering : ", real_steering)
+        print("steering_mean : ", steering_mean)
         cv2.imshow("Image window", img_bgr)
         # if if_detect:
             # cv2.imshow("yellow", yellow)
-        self.speed_pub.publish(100)
-        self.steer_pub.publish(15)
-        # 1 -> 1.3333333333333333 도 
+        self.speed_pub.publish(1000)
+        self.steer_pub.publish(real_steering)
+
+        # 0 ~ 1 -> -19.5 ~ 19.5 
         if slideing_img is not None:
             cv2.imshow("Slidinw window", slideing_img)
         cv2.waitKey(1)
@@ -47,15 +54,16 @@ class Test_drive:
 
     def lane_detection(self, img):
         img = self.preprocess.preprocess(img)
-        cv2.imshow("preprocess", img)
-        img, x_location = self.slidewindow.slidewindow(img)
-        if x_location is None:
-            x_location = 318
+        # cv2.imshow("preprocess", img)
+        img, angle, center= self.slidewindow.slidewindow(img)
+        # if x_location is None:
+        #     x_location = 318
         
-        steering = -self.pidcal.pid_control(x_location)
-        # cv2.imshow("Slidinw window", img)
+        steering = -self.pidcal.pid_control(center)
+        # print("steering : ", steering) 
+        # cv2.imshow("Slidinw window", img)print('degree : ', degree)
         cv2.waitKey(1)
-        return img, steering
+        return img, angle, steering
 
 if __name__ == '__main__':
 
