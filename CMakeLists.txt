@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(Sparkle)
 
+set(CMAKE_CXX_STANDARD 14) # 추가 
+
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
 
@@ -11,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
+  sensor_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -206,3 +209,6 @@ include_directories(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+add_executable(lidar_convert scripts/lidar/convert_lidar.cpp)
+target_link_libraries(lidar_convert ${catkin_LIBRARIES})
