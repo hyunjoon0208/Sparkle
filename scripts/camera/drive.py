@@ -29,20 +29,14 @@ class Test_drive:
     
         
 
-    
     def callback(self, data):
         img_bgr =cv2.imdecode(np.fromstring(data.data, np.uint8),cv2.IMREAD_COLOR)
         slideing_img, steering = self.lane_detection(img_bgr)
-        #scaling angle to 0 ~ 180 -> 0.0 ~ 1.0
         
-        # steering_mean = (real_steering + steering) / 2.0
-        print("steering : ", steering)
-        # print("real_steering : ", real_steering)
-        # print("steering_mean : ", steering_mean)
         cv2.imshow("Image window", img_bgr)
-        # if if_detect:
+        # if if_detect:640
             # cv2.imshow("yellow", yellow)
-        self.speed_pub.publish(1000)
+        self.speed_pub.publish(3000)
         self.steer_pub.publish(steering)
 
         # 0 ~ 1 -> -19.5 ~ 19.5 
@@ -54,13 +48,18 @@ class Test_drive:
     def lane_detection(self, img):
         img = self.preprocess.preprocess(img)
         # cv2.imshow("preprocess", img)
-        img, steering= self.slidewindow.slidewindow(img)
-        # if x_location is None:
-        #     x_location = 318
+        img, x_location, line_flag= self.slidewindow.slidewindow(img)
         
-        # steering = -self.pidcal.pid_control(center)
-        # print("steering : ", steering) 
-        # cv2.imshow("Slidinw window", img)print('degree : ', degree)
+        pid = self.pidcal.pid_control(x_location)
+        if line_flag == 1:
+            print("right")
+            steering = abs(pid - 0.5)
+        else:
+            print("left")
+            steering = abs(pid - 0.5)
+        print('x_location : ', x_location)
+        print("pid steering : ", pid) 
+        print("steering : ", steering)
         cv2.waitKey(1)
         return img, steering
 
