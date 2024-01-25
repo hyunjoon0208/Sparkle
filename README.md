@@ -14,3 +14,4 @@
 - 조현준 (Camera)
 
 ## 대회 포스터
+![RUiRQNhTyBVuRTQEZmcgHasBYo](https://github.com/hyunjoon0208/Sparkle/assets/54919634/a663e428-9e5a-4a23-a8f2-bd1b017eab8f)
