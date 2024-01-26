@@ -1,12 +1,17 @@
+import time
+
 class PidCal:
     error_sum = 0
     error_old = 0
-    p = [0.0015, 0.000001, 0.0033] # optimized kp,ki,kd
+    p = [0.000699, 0.000001, 0.00001] # optimized kp,ki,kd
+    # p = [0.001, 0.0000003, 0.003]
     dp = [p[0]/10, p[1]/10, p[2]/10] # to twiddle kp, ki, kd
 
     def __init__(self):
         # print "init PidCal"
         self.x = 0
+        self.clear_time = time.time()
+        
     def cal_error(self, setpoint=320):
         return setpoint - self.x
 
@@ -44,6 +49,9 @@ class PidCal:
     # setpoint is the center and the x_current is where the car is
     # width = 640, so 320 is the center but 318 is more accurate in real
     def pid_control(self, x_current, setpoint=320):
+        # if time.time() - self.clear_time > 0.1:
+        #     self.error_sum = 0
+        #     self.clear_time = time.time()
         # print "HHHHHHHHHHHHHHH"
         # print x_current
         self.x = int(x_current)
@@ -56,6 +64,8 @@ class PidCal:
         d1 = round(self.p[2] * (error -  self.error_old), 9)
         self.error_old = error
         pid = p1 +i1+ d1
+        # pid = p1 + d1
+        # pid = p1 + d1
         # print("p : " ,p)
         # print("i : " ,i)
         # print("d : " ,d)

@@ -2,9 +2,9 @@
 
 import cv2
 import os, sys
-sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+# sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 import numpy as np
-from warper import Warper
+from  .warper import Warper
 class Preprocess:
     def __init__(self) -> None:
         self.warper = Warper()

@@ -10,7 +10,7 @@ class SlideWindow:
         self.leftx = None
         self.rightx = None
 
-    def slidewindow(self, img):
+    def slidewindow(self, img, line_flag):
         # self.lane_tunning_num = 0.001
         x_location = 320
         out_img = np.dstack((img, img, img))
@@ -33,18 +33,17 @@ class SlideWindow:
         # print(nonzerox)
         # init data need to sliding windows
         margin = 40
-        minpix = 5
+        minpix = 10
         # print("hello")
         left_lane_inds = []
         right_lane_inds = []
         
-        win_y_high = 360
+        win_y_high = 200
         win_y_low = 480
         left_lane_start_x = 40
-        left_lane_end_x = 160
-        right_lane_start_x = 480
+        left_lane_end_x = 270
+        right_lane_start_x = 370
         right_lane_end_x = 600
-        line_flag = None
         
         pts_left = np.array([[left_lane_start_x,win_y_low],[left_lane_start_x,win_y_high],[left_lane_end_x, win_y_high],[left_lane_end_x,win_y_low]],np.int32)
         cv2.polylines(out_img, [pts_left], False, (0,255,0), 1)
@@ -61,24 +60,20 @@ class SlideWindow:
         p_cut = None
         cv2.circle(out_img, (320, y_current), 5, (0, 255, 255), -1)
         
-
-        if len(good_right_inds) > len(good_left_inds):
+        if line_flag == 'R':
             self.current_line = 'RIGHT'
-            line_flag = 'R'
             if nonzerox[good_right_inds] is not None:
                 rx_current = np.int(np.mean(nonzerox[good_right_inds]))
-            
-        elif len(good_left_inds) > len(good_right_inds):
-            line_flag = 'L'
+        else:
             self.current_line = 'LEFT'
+            print(line_flag)
             if nonzerox[good_left_inds] is not None:
                 lx_current = np.int(np.mean(nonzerox[good_left_inds]))
         
-        R_win_x_l = 480
-        R_win_x_h = 560
-        L_win_x_l = 80
-        L_win_x_h = 160
-        cx,cy,lx,rx,ly,ry = [],[],[],[],[],[]
+        R_win_x_l = 370
+        R_win_x_h = 600
+        L_win_x_l = 40
+        L_win_x_h = 270
         for window in range(0, nwindows):
             if line_flag == 'R':
                 R_win_x_l = rx_current - margin
@@ -87,10 +82,11 @@ class SlideWindow:
                 R_win_y_h = y_current - (window) * window_height
 
                 img = cv2.rectangle(out_img, (R_win_x_l, R_win_y_l), (R_win_x_h, R_win_y_h), (255, 0, 0), 1)
-                good_right_inds = ((nonzerox >= R_win_x_l) & (nonzeroy >=  360 ) &(nonzeroy <= 480) & (nonzerox <= R_win_x_h)).nonzero()[0]
+                good_right_inds = ((nonzerox >= R_win_x_l) & (nonzeroy >= R_win_y_l  ) &(nonzeroy <= R_win_y_h) & (nonzerox <= R_win_x_h)).nonzero()[0]
                 # right_lane_inds.append(good_right_inds)
-                rx_current = np.int(np.mean(nonzerox[good_right_inds]))
-                x_location = rx_current - width*0.4
+                if len(good_right_inds) > 0:
+                    rx_current = np.int(np.mean(nonzerox[good_right_inds]))
+                x_location = rx_current - width*0.3
                 # print('rx_current : ', rx_current)
             
             elif line_flag == 'L':
@@ -100,10 +96,12 @@ class SlideWindow:
                 L_win_y_h = y_current - (window) * window_height
 
                 img = cv2.rectangle(out_img, (L_win_x_l, L_win_y_l), (L_win_x_h, L_win_y_h), (0, 255, 0), 1)
-                good_left_inds = ((nonzerox >= L_win_x_l) & (nonzeroy >=  360 ) &(nonzeroy <= 480) & (nonzerox <= L_win_x_h)).nonzero()[0]
+                good_left_inds = ((nonzerox >= L_win_x_l) & (nonzeroy >=  L_win_y_l ) &(nonzeroy <= L_win_y_h) & (nonzerox <= L_win_x_h)).nonzero()[0]
                 # left_lane_inds.append(good_left_inds)
-                lx_current = np.int(np.mean(nonzerox[good_left_inds]))
-                x_location = lx_current + width*0.4
+                if len(good_left_inds) > 0:
+                    lx_current = np.int(np.mean(nonzerox[good_left_inds]))
+                # lx_current = np.int(np.mean(nonzerox[good_left_inds]))
+                x_location = lx_current + width*0.32
             # if line_flag == 0:
             #     win_y_low = height - (window + 1) * window_height
             #     win_y_high = height - (window) * window_height
