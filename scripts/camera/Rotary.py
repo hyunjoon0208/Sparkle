@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import rospy, cv2
+import rospy, cv2, sys, os
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 import numpy as np
 import morai_msgs.msg as CtrlCmd
 from std_msgs.msg import Float64
 from sensor_msgs.msg import Image, CompressedImage, Imu, LaserScan
 from cv_bridge import CvBridge
-from Preprocess import Preprocess
-from StopDetector import stop_line
+from .Preprocess import Preprocess
+from .StopDetector import stop_line
 
 
 class Rotary:
@@ -97,89 +98,87 @@ class Rotary:
             self.yellow_lane_detected = False
 
     def run(self):
-        while not rospy.is_shutdown():
-            print('state : ', self.state)
-            if self.state <=1 and self.obstacle_detected == True:
-                print('obstacle_detected')
-                self.state = 0
-                continue
-            elif self.state == 0 and self.obstacle_detected == False:
-                print('no obstacle_detected & Let\'s go')
-                self.state = 1
-                self.find_center()
-            if self.state == 1 and self.center_detected == True:
-                print('center_detected')
-                self.find_center()
-                # self.state = 1
-                continue
-            elif self.state == 1 and self.center_detected == False:
-                print('no center_detected & Let\'s go')
-                self.state = 2
+        print('state : ', self.state)
+        if self.state <=1 and self.obstacle_detected == True:
+            print('obstacle_detected')
+            self.state = 0
+        elif self.state == 0 and self.obstacle_detected == False:
+            print('no obstacle_detected & Let\'s go')
+            self.state = 1
+            self.find_center()
+        if self.state == 1 and self.center_detected == True:
+            print('center_detected')
+            self.find_center()
+            # self.state = 1
             
-            if self.state == 2 and 0.85<self.yaw<0.95:
-                print('exit_yaw')
-                self.state = 3
-                # continue
+        elif self.state == 1 and self.center_detected == False:
+            print('no center_detected & Let\'s go')
+            self.state = 2
+        
+        if self.state == 2 and 0.85<self.yaw<0.95:
+            print('exit_yaw')
+            self.state = 3
+            # 
 
-            elif self.state == 2 and self.front_car_detected == True:
-                print('front_car_detected')
-                self.state = 2
-                self.speed = 0
-                continue
-            elif self.state == 2 and self.front_car_detected == False:
-                print('no front_car_detected & Let\'s go')
-                print('lane detection')
-                print('yaw : ', self.yaw)
-            if self.state == 3:
-                error = round(self.yaw,2) - self.straight_yaw
-                if abs(error) > 0.005: 
-                    if error > 0:
-                        self.steer = 0
-                    else:
-                        self.steer = 1
-                    print('steer : ', self.steer)
+        elif self.state == 2 and self.front_car_detected == True:
+            print('front_car_detected')
+            self.state = 2
+            self.speed = 0
+            
+        elif self.state == 2 and self.front_car_detected == False:
+            print('no front_car_detected & Let\'s go')
+            print('lane detection')
+            print('yaw : ', self.yaw)
+        if self.state == 3:
+            error = round(self.yaw,2) - self.straight_yaw
+            if abs(error) > 0.005: 
+                if error > 0:
+                    self.steer = 0
                 else:
-                    self.steer = 0.5
-                    print('steer : ', self.steer)
-                    self.state = 4
-                    self.find_yellow_lane()
-                    # continue
-            if self.state == 4 and self.yellow_lane_detected == False:
-                #lane change
-                self.steer = 0.3
+                    self.steer = 1
+                print('steer : ', self.steer)
+            else:
+                self.steer = 0.5
+                print('steer : ', self.steer)
+                self.state = 4
                 self.find_yellow_lane()
-                continue
-            elif self.state == 4 and self.yellow_lane_detected == True:
-                error = round(self.yaw,2) - self.straight_yaw
-                if abs(error) > 0.005: 
-                    if error > 0:
-                        self.steer = 0
-                    else:
-                        self.steer = 1
-                    print('steer : ', self.steer)
+                # 
+        if self.state == 4 and self.yellow_lane_detected == False:
+            #lane change
+            self.steer = 0.3
+            self.find_yellow_lane()
+            
+        elif self.state == 4 and self.yellow_lane_detected == True:
+            error = round(self.yaw,2) - self.straight_yaw
+            if abs(error) > 0.005: 
+                if error > 0:
+                    self.steer = 0
                 else:
-                    self.steer = 0.5
-                    print('steer : ', self.steer)
-                    self.state = 5
-            
-            if self.state == 5:
-                if self.stop_detector.isStop(self.img):
-                    print('stop line detected')
-                    self.speed = 0
-                    self.state = 6
-                    print('DONE ROTARY')
-                    break
-            
-            
-            self.speed_pub.publish(self.speed)
-            self.steer_pub.publish(self.steer)
-        self.speed_pub.publish(0)
-        self.steer_pub.publish(0.5)
+                    self.steer = 1
+                print('steer : ', self.steer)
+            else:
+                self.steer = 0.5
+                print('steer : ', self.steer)
+                self.state = 5
+        
+        if self.state == 5:
+            if self.stop_detector.isStop(self.img):
+                print('stop line detected')
+                self.speed = 0
+                self.state = 6
+                print('DONE ROTARY')
+                
+        
+        
+        return self.speed, self.steer, self.state
 
-            
+    
+    def __del__(self):
+        print('DELETE ROTARY')
 
 if __name__ == '__main__':
     try:
+        print('ROTARY')
         rotary = Rotary()
         rotary.run()
     except rospy.ROSInterruptException:
