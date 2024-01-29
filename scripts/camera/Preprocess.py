@@ -4,7 +4,8 @@ import cv2
 import os, sys
 # sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 import numpy as np
-from  .warper import Warper
+from  warper import Warper
+
 class Preprocess:
     def __init__(self) -> None:
         self.warper = Warper()
@@ -19,17 +20,9 @@ class Preprocess:
         return img
 
     def find_yellow(self,img):
-        try:
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-            lower = np.array([20, 100, 100])
-            upper = np.array([30, 255, 255])
-            mask = cv2.inRange(img, lower, upper)
-            finded = cv2.bitwise_and(img, img, mask=mask)
-        except:
-            finded = None
-
-            
-        if finded is not None:
-            return True, finded
-        else:
-            return False, None
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        lower_yellow = np.array([20, 100, 100])
+        upper_yellow = np.array([30, 255, 255])
+        img = cv2.inRange(img, lower_yellow, upper_yellow)
+        img = self.warper.warp(img)
+        return img

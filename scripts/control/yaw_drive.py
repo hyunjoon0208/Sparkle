@@ -34,16 +34,14 @@ class YawDrive:
         self.slidewindow = SlideWindow()
         self.pidcal = PidCal()
         self.lane_steer = 0.5
-
+        
         
         
         self.IMU_sub = rospy.Subscriber('/imu', Imu, self.yaw_callback)
         self.Lidar_sub = rospy.Subscriber('/scan', LaserScan, self.lidar_callback)
         self.cam_sub = rospy.Subscriber('/image_jpeg/compressed', CompressedImage, self.cam_callback, queue_size=1)
 
-        
-        self.speed_pub = rospy.Publisher('/commands/motor/speed', Float64, queue_size=1)
-        self.steer_pub = rospy.Publisher('/commands/servo/position', Float64, queue_size=1)
+        # self.speed_pub = rospy.Publisher('/ctrl_cmd', CtrlCmd.ControlCommand, queue_size=1)
         
     def yaw_callback(self, msg):
         self.yaw = msg.orientation.z
@@ -115,7 +113,7 @@ class YawDrive:
             
     def lane_detection(self, img):
         img = self.preprocess.preprocess(img)
-        slideing_img, x_location,line_flag = self.slidewindow.slidewindow(img,'L')
+        slideing_img, x_location,line_flag = self.slidewindow.slidewindow(img,'R')
         return slideing_img, x_location,line_flag
 
     def avoid(self):
