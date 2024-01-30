@@ -1,0 +1,26 @@
+global_costmap:
+  global_frame: map
+  robot_base_frame: base_link
+  update_frequency: 1.0
+  publish_frequency: 0.5
+  static_map: true
+  resolution: 0.1 # 엄청 좋지 않아도 된다. global costmap은 전체적인 형상만 있으면 된다.
+  transform_tolerance: 0.5
+
+  obstacle_layer: # 센서로부터 얻어진 layer이며 장애물을 인식해서 global costmap에 넣는다.
+    enabled: true
+    obstacle_range: 5.5 # 5.5m
+    raytrace_range: 6.0 # laser 센서로부터 얻어져서 받을수 있는 범위 / free space range를 준다. / raytrace가 obstacle_range보다 커야한다. why? ->
+    inflation_radius: 0.3 #  0.2도 해보기 / 센서 장애물을 인식했을 때의 radius이다. 0.45는 좀 크다. test하면서 바꿔보기
+    track_unknown_space: true # slam으로 부터 얻어진 space가 아닌 경우에도 track을 하겠다는 의미
+    combination_method: 1 # 어떤게 있는지 나중에 찾아보기
+    observation_sources: laser_scan_sensor # obstacle source를 laser_scan_sensor로 한다.
+    laser_scan_sensor: {data_type: LaserScan, topic: scan, marking: true, clearing: true} # lidar2D에서 scan이라는 토픽을 받아서 marking과 clearing을 한다.
+
+  plugins: # 사용하고 있는 plugin들
+    - {name: static_layer, type: "costmap_2d::StaticLayer"} # common에 있는 static_layer
+    - {name: obstacle_layer, type: "costmap_2d::VoxelLayer"}
+    - {name: inflation_layer, type: "costmap_2d::InflationLayer"}
+    
+
+
