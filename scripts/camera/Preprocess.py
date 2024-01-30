@@ -10,19 +10,30 @@ class Preprocess:
     def __init__(self) -> None:
         self.warper = Warper()
 
-    def preprocess(self, img):
+    def preprocess(self, img,warp_flag = 'CL'):
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        img = cv2.inRange(img, 100, 255)
         
-        img = self.warper.warp(img)
+        if warp_flag == 'CL':
+            warp_img = self.warper.left_warp(img)
+        else:
+            warp_img = self.warper.warp(img)
         # img = cv2.GaussianBlur(img, (3,3), 0)
         # img = cv2.Canny(img, 100, 200)
-        img = cv2.inRange(img, 100, 255)
-        return img
+        return warp_img
 
     def find_yellow(self,img):
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        lower_yellow = np.array([20, 100, 100])
-        upper_yellow = np.array([30, 255, 255])
-        img = cv2.inRange(img, lower_yellow, upper_yellow)
-        img = self.warper.warp(img)
-        return img
+        try:
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+            lower = np.array([20, 100, 100])
+            upper = np.array([30, 255, 255])
+            mask = cv2.inRange(img, lower, upper)
+            finded = cv2.bitwise_and(img, img, mask=mask)
+        except:
+            finded = None
+
+            
+        if finded is not None:
+            return True, finded
+        else:
+            return False, None
