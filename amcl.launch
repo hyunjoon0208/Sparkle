@@ -1,0 +1,45 @@
+<launch>
+<node pkg="amcl" type="amcl" name="amcl" output="screen">
+  <!-- Publish scans from best pose at a max of 10 Hz -->
+  <param name="odom_model_type" value="diff"/> <!-- 오도메트리 모델 유형, diff는 디퍼렌셜 모델 유형 -->
+  <param name="odom_alpha5" value="0.1"/> <!-- 오도메트리 노이즈 모델을 위한 파라미터-->
+  <param name="gui_publish_rate" value="10.0"/> <!-- gui를 통해 맵을 업데이트하는 주기 -->
+  <param name="laser_max_beams" value="30"/> <!-- 레이저 빔의 최대 개수 -->
+  <param name="min_particles" value="700"/> <!-- 파티클의 최소 개수 좀 많으면 시스템이 localization을 잘하는 경향 그렇다고 너무 많아도 안됨.. 많으면 프로세스 성능 저하-->
+  <param name="max_particles" value="1000"/> <!-- before 5000, odom이 너무 잘되면 1000으로 해도 될듯 / dafault : 2000-->
+  <param name="kld_err" value="0.05"/> <!-- 적응형 재샘플링을 위한 즉 kld 샘플링을 위한 파라미터 -->
+  <param name="kld_z" value="0.99"/> <!-- 적응형 재샘플링을 위한 즉 kld 샘플링을 위한 파라미터 -->
+  <param name="odom_alpha1" value="0.2"/>
+  <param name="odom_alpha2" value="0.2"/>
+  <!-- translation std dev, m -->
+  <param name="odom_alpha3" value="0.8"/>
+  <param name="odom_alpha4" value="0.2"/>
+  <param name="laser_z_hit" value="0.5"/>
+  <param name="laser_z_short" value="0.05"/>
+  <param name="laser_z_max" value="0.05"/>
+  <param name="laser_z_rand" value="0.5"/>
+  <param name="laser_sigma_hit" value="0.2"/> <!-- 레이저 히트 확률의 가우시안 모델의 표준 편차-->
+  <param name="laser_lambda_short" value="0.1"/>
+  <param name="laser_model_type" value="likelihood_field"/>
+  <!-- <param name="laser_model_type" value="beam"/> -->
+  <param name="laser_likelihood_max_dist" value="2.0"/>  <!-- Likely_filed 모델의 최대 거리이다. / 조절해봐도 좋을수도 있다-->
+  <param name="update_min_d" value="0.2"/> 
+  <param name="update_min_a" value="0.5"/>
+  <param name="odom_frame_id" value="odom"/>
+  <param name="resample_interval" value="1"/>
+  <param name="transform_tolerance" value="0.1"/>
+  <param name="recovery_alpha_slow" value="0.0"/>
+  <param name="recovery_alpha_fast" value="0.0"/>
+
+  <!-- 추가된 param들 아래로 6개-->
+  <param name="initial_pose_x" value="1.3"/> <!-- 초기 위치 -->
+  <param name="initial_pose_y" value="0.9938489821264529"/>
+  <param name="initial_pose_a" value="1.540"/>
+
+  <param name="initial_cov_xx" value="0.01"/> <!-- 0.5, 0.5, 0.5 --> <!-- 초기 위치의 분산 -->
+  <param name="initial_cov_yy" value="0.01"/> <!-- 0.01 0.01 0.0 해보기--> <!-- 0.25 0.25 0.3-->
+  <param name="initial_cov_aa" value="0.0"/>
+  
+
+</node>
+</launch>
