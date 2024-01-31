@@ -20,7 +20,7 @@ class StaticObstacle:
     def __init__(self):
         self.yaw = 0
         self.straight_yaw = 0
-        self.steer = 0.5
+        
         self.lane_steer = 0.5 # camera steer
         self.front_obstacle_distance = 0
         self.front_obstacle_detected = False
@@ -30,6 +30,7 @@ class StaticObstacle:
         self.narrow_front_obstacle_detected = False
         self.lane_detetced = False
         self.avoid_state = -1
+        self.steer = 0.5
         self.speed = 1400
 
         self.line_flag = "R"
@@ -46,8 +47,8 @@ class StaticObstacle:
         self.cam_sub = rospy.Subscriber('/image_jpeg/compressed', CompressedImage, self.cam_callback, queue_size=1)
 
         
-        self.speed_pub = rospy.Publisher('/speed', Float64, queue_size=1)
-        self.steer_pub = rospy.Publisher('/steer', Float64, queue_size=1)
+        # self.speed_pub = rospy.Publisher('/speed', Float64, queue_size=1)
+        # self.steer_pub = rospy.Publisher('/steer', Float64, queue_size=1)
         
     def yaw_callback(self, msg):
         self.yaw = msg.orientation.z
@@ -95,8 +96,8 @@ class StaticObstacle:
             self.back_obstacle_detected = False   
 
         self.avoid()
-        self.speed_pub.publish(self.speed)
-        self.steer_pub.publish(self.steer)
+        # self.speed_pub.publish(self.speed)
+        # self.steer_pub.publish(self.steer)
  
     def cam_callback(self, data):
         img_bgr =cv2.imdecode(np.fromstring(data.data, np.uint8),cv2.IMREAD_COLOR)

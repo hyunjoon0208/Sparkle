@@ -3,9 +3,10 @@
 
 import time, os, sys, rospy, tf, cv2
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
-from std_msgs.msg import Float64, Bool
+from std_msgs.msg import Float64, Bool, Int16
 from morai_msgs.msg import CtrlCmd,GetTrafficLightStatus
 from sensor_msgs.msg import CompressedImage, Imu
+from math import pi
 from tf.transformations import euler_from_quaternion,quaternion_from_euler
 import numpy as np
 from camera.StopDetector import stop_line
@@ -14,6 +15,9 @@ from camera.Rotary import Rotary
 from camera.slidewindow import SlideWindow
 from camera.Preprocess import Preprocess
 from control.pidcal import PidCal
+from control.static_obstacle import StaticObstacle
+from control.dynamic_obstacle import DynamicObstacle
+
 
 class main_drive:
     def __init__(self):
@@ -25,12 +29,15 @@ class main_drive:
         self.slidewindow = SlideWindow()
         self.preprocess = Preprocess()
         self.pidcal = PidCal()
+        self.static_obstacle = None
+        self.dynamic_obstacle = None
 
         #numeric variable
         self.flag = 0
         self.curve_counter = 0
         self.line_flag = 'R'
         self.yaw = 0
+        self.obstacle_mode = 0
 
         #image variable
         self.img = None
@@ -44,15 +51,15 @@ class main_drive:
 
         # subscriber
         self.img_sub = rospy.Subscriber('/image_jpeg/compressed', CompressedImage, self.cam_steer_callback, queue_size=1)
-        self.obstacle_sub = rospy.Subscriber("/obstacle_detector", Float64, self.obstacle_callback, queue_size=1)
+        self.obstacle_mode_sub = rospy.Subscriber('/obstacle_mode', Int16, self.lidar_callback, queue_size=1)
         self.trafiic_light_sub = rospy.Subscriber('GetTrafficLightStatus', GetTrafficLightStatus, self.traffic_light_callback, queue_size=1)
         self.imu_sub = rospy.Subscriber('/imu', Imu, self.Imu_callback, queue_size=1)
         # rospy.Subscriber('/slam_end_flag', Bool, self.slam_end_callback, queue_size=1)
         # publisher
         # self.steer_pub = rospy.Publisher('/steer', Float64, queue_size=1)
         # self.speed_pub = rospy.Publisher('/speed', Float64, queue_size=1)
-        self.speed_pub = rospy.Publisher('/commands/motor/speed', Float64, queue_size=1)
-        self.steer_pub = rospy.Publisher('/commands/servo/position', Float64, queue_size=1)
+        self.speed_pub = rospy.Publisher('/commands/motor/speed', Float64, queue_size=1)   # FOR TEST!!!!!!!!!!!
+        self.steer_pub = rospy.Publisher('/commands/servo/position', Float64, queue_size=1)# FOR TEST!!!!!!!!!!!
         
 
         # 제어값
@@ -79,14 +86,17 @@ class main_drive:
         else:
             self.lane_detetced = False
         cv2.waitKey(1)
-        pid = self.pidcal.pid_control(x_location)
+        
         if self.line_flag == 'R':
+            pid = self.pidcal.pid_control(x_location)
             steering = abs(pid - 0.5)
             self.lane_steer = steering
         elif self.line_flag == 'L':
+            pid = self.pidcal.pid_control(x_location)
             steering = abs(pid - 0.5)
             self.lane_steer = steering
         elif self.line_flag == 'CL':
+            pid = self.pidcal.curve_pid_control(x_location)
             steering = abs(pid - 0.5)
             self.lane_steer = steering
             if steering < 0.5:
@@ -94,8 +104,10 @@ class main_drive:
             
     def Imu_callback(self, msg):
         self.yaw = abs(msg.orientation.z)
-    def obstacle_callback(self, msg):
-        self.obstacle_steer = msg.data
+    
+    def lidar_callback(self, msg):
+        self.obstacle_mode = msg.data
+
     def traffic_light_callback(self, msg):
         try:
             if msg.traffic_light_status == 33:
@@ -132,9 +144,26 @@ class main_drive:
 
 
         elif self.flag == 1: # 장애물 감지 및 회피
-            # self.steer = self.obstacle_steer
-            self.steer = self.lane_steer # for test!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
-            if self.curve_detector.curve_flag == 2:
+            if self.obstacle_mode == 0:
+                self.steer = self.lane_steer
+            
+            elif self.obstacle_mode == 1:
+                self.static_obstacle = StaticObstacle()
+                self.steer = self.static_obstacle.steer
+                self.speed = self.static_obstacle.speed
+                if self.dynamic_obstacle is not None:
+                    self.dynamic_obstacle = None
+
+            elif self.obstacle_mode == 2:
+                self.dynamic_obstacle = DynamicObstacle()
+                self.steer = self.dynamic_obstacle.steer
+                self.speed = self.dynamic_obstacle.speed
+                if self.static_obstacle is not None:
+                    self.static_obstacle = None
+            # self.steer = self.lane_steer # for test!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+            if self.curve_detector.curve_flag == 2 and self.obstacle_mode == 3:
+                del(self.static_obstacle)
+                del(self.dynamic_obstacle)
                 self.flag = 2
 
 
@@ -186,7 +215,7 @@ class main_drive:
 
         elif self.flag == 5: #신호받고 좌회전
             if self.is_left_turn:
-                self.Rotary.__del__()
+                del(self.Rotary)
                 # self.flag = 6
                 pass
             self.flag = 6

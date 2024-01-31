@@ -6,7 +6,6 @@ from std_msgs.msg import Float64, Int16
 from math import *
 import numpy as np
 # from CurveDetector import CurveDetector
-from control.yaw_drive_copy import YawDrive
 import cv2
 import numpy as np
 
@@ -15,8 +14,8 @@ class DynamicObstacle:
         rospy.init_node("dynamic_obstacle")
         rospy.Subscriber("/scan", LaserScan, self.lidar_callback)
 
-        self.speed_pub = rospy.Publisher('/speed', Float64, queue_size=1)
-        self.steer_pub = rospy.Publisher('/steer', Float64, queue_size=1)
+        # self.speed_pub = rospy.Publisher('/speed', Float64, queue_size=1)
+        # self.steer_pub = rospy.Publisher('/steer', Float64, queue_size=1)
 
         self.cam_sub = rospy.Subscriber('/image_jpeg/compressed', CompressedImage, self.cam_callback, queue_size=1)
 
@@ -40,8 +39,8 @@ class DynamicObstacle:
             else:
                 self.speed = 2400
 
-        self.speed_pub.publish(self.speed)
-        self.steer_pub.publish(self.steer)
+        # self.speed_pub.publish(self.speed)
+        # self.steer_pub.publish(self.steer)
 
 
     def cam_callback(self, data):
