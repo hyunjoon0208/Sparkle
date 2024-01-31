@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 from std_msgs.msg import Float64
 from sensor_msgs.msg import CompressedImage
-from camera.slidewindow_test import SlideWindow
+from camera.slidewindow import SlideWindow
 from camera.Preprocess import Preprocess
 from control.pidcal import PidCal
 
@@ -44,10 +44,6 @@ class StaticObstacle:
         self.Lidar_sub = rospy.Subscriber('/scan', LaserScan, self.lidar_callback)
         self.cam_sub = rospy.Subscriber('/image_jpeg/compressed', CompressedImage, self.cam_callback, queue_size=1)
 
-        
-        # self.speed_pub = rospy.Publisher('/speed', Float64, queue_size=1)
-        # self.steer_pub = rospy.Publisher('/steer', Float64, queue_size=1)
-    
     def set_straight_yaw(self, yaw):
         self.straight_yaw = yaw
 
@@ -138,7 +134,7 @@ class StaticObstacle:
                 print(e)
 
     def lane_detection(self, img):
-        img = self.preprocess.preprocess(img)
+        img = self.preprocess.preprocess(img, self.line_flag)
         slideing_img, x_location, _ = self.slidewindow.slidewindow(img, self.line_flag)
         return slideing_img, x_location
     

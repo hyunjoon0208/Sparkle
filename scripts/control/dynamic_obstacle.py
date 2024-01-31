@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 from std_msgs.msg import Float64
 from sensor_msgs.msg import CompressedImage
-from camera.slidewindow_test import SlideWindow
+from camera.slidewindow import SlideWindow
 from camera.Preprocess import Preprocess
 from control.pidcal import PidCal
 
@@ -54,18 +54,15 @@ class DynamicObstacle:
 
 
     def cam_callback(self, data):
-        img_bgr =cv2.imdecode(np.fromstring(data.data, np.uint8),cv2.IMREAD_COLOR)
+        img_bgr = cv2.imdecode(np.fromstring(data.data, np.uint8),cv2.IMREAD_COLOR)
         slideing_img, x_location = self.lane_detection(img_bgr)
-        cv2.imshow("Image window", img_bgr)
-        if slideing_img is not None:
-            cv2.imshow("Slidinw window", slideing_img)
         cv2.waitKey(1)
         pid = self.pidcal.pid_control(x_location)
         steering = abs(pid - 0.5)
         self.steer = steering
 
     def lane_detection(self, img):
-        img = self.preprocess.preprocess(img)
+        img = self.preprocess.preprocess(img, "R")
         slideing_img, x_location, _ = self.slidewindow.slidewindow(img, "R")
         return slideing_img, x_location
         
