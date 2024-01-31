@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
 import rospy
 from math import pi
 from std_msgs.msg import Float64
@@ -17,7 +16,7 @@ from camera.slidewindow_test import SlideWindow
 from camera.Preprocess import Preprocess
 from control.pidcal import PidCal
 
-class YawDrive:
+class StaticObstacle:
     def __init__(self):
         self.yaw = 0
         self.straight_yaw = 0
@@ -40,7 +39,7 @@ class YawDrive:
         self.slidewindow = SlideWindow()
         self.pidcal = PidCal()
 
-        rospy.init_node('yaw_drive', anonymous=True)
+        rospy.init_node('static_obstacle', anonymous=True)
         
         self.IMU_sub = rospy.Subscriber('/imu', Imu, self.yaw_callback)
         self.Lidar_sub = rospy.Subscriber('/scan', LaserScan, self.lidar_callback)
@@ -142,7 +141,6 @@ class YawDrive:
     def avoid(self):
         if self.avoid_state == -1:
             if self.front_obstacle_detected:
-                print("self.front_obstacle_distance : ", self.front_obstacle_distance)
                 self.avoid_state = 0
                 self.steer = 0.3
             else:
@@ -159,7 +157,6 @@ class YawDrive:
                 if self.yellow_lane_detected and self.lane_detetced:  
                     self.steer = self.lane_steer
                 elif self.straight_yaw - self.yaw > 0.13:
-                    print("!!!!!!!!!!!!!!!!!!!!!!!")
                     self.steer = 0.2
             if self.front_right_obstacle_detected:
                 self.avoid_state = 1
@@ -184,7 +181,7 @@ class YawDrive:
 
 if __name__ == '__main__':
     try:
-        yaw_drive = YawDrive()
+        static_obstacle = StaticObstacle()
         rospy.spin()
     except rospy.ROSInterruptException:
         pass
