@@ -2,9 +2,9 @@ class CurveDetector:
     def __init__(self):
         self.curve_flag = 0
     
-    def curve_detector(self,yaw):
+    def curve_detector(self, yaw):
         if self.curve_flag == 0:
-            if 0.69 <= yaw <= 0.71:
+            if 0.43 <= yaw <= 0.71:
                 self.curve_flag = 1
         elif self.curve_flag == 1:
             if 0.99 <= yaw <= 1.0:
