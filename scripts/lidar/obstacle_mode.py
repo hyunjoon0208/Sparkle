@@ -29,11 +29,20 @@ class Obstacle_mode:
 
         for index, value in enumerate(self.scan_msg.ranges):
             if self.obstacle_mode == 0:
-                if ((-30 < degrees[index] < -10 and 0 < value < 1.5)): 
+                # if (-40 < degrees[index] < -5 and 0 < value < 4): 
+                #     print("degrees[index]", degrees[index], "value", value)
+
+                    
+
+                # if ((-30 < degrees[index] < -10 and 0 < value < 1.5) or (20 <= degrees[index] < 70 and 0 < value < 1.5)): 
+                # if ((-30 < degrees[index] < -10 and 0 < value < 1.6) or (20 <= degrees[index] < 70 and 0 < value < 1.6)): 
+                if ((-20 < degrees[index] < -10 and 0 < value < 2.8) or (20 <= degrees[index] < 70 and 0 < value < 1.6)): 
                     self.obstacle_mode = 1
-                elif abs(degrees[index])< 3 and 0 < value < 3:
+                # elif abs(degrees[index])< 3 and 0 < value < 3:
+                # elif abs(degrees[index])< 3 and 0 < value < 1.3:    
+                    
+                elif abs(degrees[index])< 3 and 0 < value < 1.5:    
                     self.obstacle_mode = 2
-        print("self.obstacle_mode", self.obstacle_mode)
         self.obstacle_mode_pub.publish(self.obstacle_mode)
             
 def main():

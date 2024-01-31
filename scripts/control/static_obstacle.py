@@ -31,7 +31,7 @@ class StaticObstacle:
         self.lane_detetced = False
         self.avoid_state = -1
         self.steer = 0.5
-        self.speed = 1400
+        self.speed = 1000
 
         self.line_flag = "R"
         self.yellow_lane_detected = False
@@ -40,8 +40,6 @@ class StaticObstacle:
         self.slidewindow = SlideWindow()
         self.pidcal = PidCal()
 
-        rospy.init_node('static_obstacle', anonymous=True)
-        
         self.IMU_sub = rospy.Subscriber('/imu', Imu, self.yaw_callback)
         self.Lidar_sub = rospy.Subscriber('/scan', LaserScan, self.lidar_callback)
         self.cam_sub = rospy.Subscriber('/image_jpeg/compressed', CompressedImage, self.cam_callback, queue_size=1)
@@ -49,9 +47,16 @@ class StaticObstacle:
         
         # self.speed_pub = rospy.Publisher('/speed', Float64, queue_size=1)
         # self.steer_pub = rospy.Publisher('/steer', Float64, queue_size=1)
-        
+    
+    def set_straight_yaw(self, yaw):
+        self.straight_yaw = yaw
+
     def yaw_callback(self, msg):
         self.yaw = msg.orientation.z
+        if self.straight_yaw == -0.7: # dynamic -> static
+            if self.yaw > 0:
+                self.yaw = -self.yaw
+
 
     def lidar_callback(self, msg):
         self.scan = msg
@@ -96,8 +101,6 @@ class StaticObstacle:
             self.back_obstacle_detected = False   
 
         self.avoid()
-        # self.speed_pub.publish(self.speed)
-        # self.steer_pub.publish(self.steer)
  
     def cam_callback(self, data):
         img_bgr =cv2.imdecode(np.fromstring(data.data, np.uint8),cv2.IMREAD_COLOR)
@@ -146,7 +149,7 @@ class StaticObstacle:
                 self.steer = 0.3
             else:
                 self.steer = self.lane_steer
-            if not self.narrow_front_obstacle_detected and abs(self.yaw - self.straight_yaw) < 0.2: # 2차선에서 주행 중 1차선의 장애물이 탐지되지 않게
+            if not self.narrow_front_obstacle_detected and abs(self.straight_yaw - self.yaw) < 0.2: # 2차선에서 주행 중 1차선의 장애물이 탐지되지 않게
                 self.steer = self.lane_steer
                 self.avoid_state = -1
         elif self.avoid_state == 0: # 정면(-20 ~ 20)에서 장애물 발견, 1차선으로 이동
@@ -162,7 +165,7 @@ class StaticObstacle:
             if self.front_right_obstacle_detected:
                 self.avoid_state = 1
         elif self.avoid_state == 1: # 정면 우측(-60 ~ -50)에서 장애물 발견, 1차선에서 차선 맞추는 중
-            if abs(self.yaw - self.straight_yaw) > 0.1:
+            if abs(self.straight_yaw - self.yaw) > 0.1:
                 self.steer = 1
             else:
                 self.steer = 0.7
@@ -170,7 +173,7 @@ class StaticObstacle:
         elif self.avoid_state == 2: # 후면 우측(-110 ~ -100)에서 장애물 발견, 1차선에서 2차선으로 이동
             if self.back_right_obstacle_detected:
                 self.steer = 0.9
-            if abs(self.yaw - self.straight_yaw) > 0.1: # 너무 확 들어가지 않게 yaw 값을 가지고 조정, 너무 확 들어가면 카메라로 차선 인식을 진행해도 차선에서 벗어남
+            if abs(self.straight_yaw - self.yaw) > 0.1: # 너무 확 들어가지 않게 yaw 값을 가지고 조정, 너무 확 들어가면 카메라로 차선 인식을 진행해도 차선에서 벗어남
                 self.line_flag = "R"
                 self.avoid_state = 3
         elif self.avoid_state == 3: # 2차선에서 차선 맞추는 중

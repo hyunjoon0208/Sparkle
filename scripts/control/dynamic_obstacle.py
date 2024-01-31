@@ -1,21 +1,29 @@
-#!/usr/bin/env phyton3
-#-*- coding:utf-8 -*-
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 import rospy
-from sensor_msgs.msg import LaserScan, CompressedImage
-from std_msgs.msg import Float64, Int16
-from math import *
-import numpy as np
-# from CurveDetector import CurveDetector
+from math import pi
+from std_msgs.msg import Float64
+from sensor_msgs.msg import Imu, LaserScan
+#!/usr/bin/env python3
+import os, sys
+sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
+import rospy
 import cv2
 import numpy as np
+from std_msgs.msg import Float64
+from sensor_msgs.msg import CompressedImage
+from camera.slidewindow_test import SlideWindow
+from camera.Preprocess import Preprocess
+from control.pidcal import PidCal
+
 
 class DynamicObstacle:
     def __init__(self):
-        rospy.init_node("dynamic_obstacle")
         rospy.Subscriber("/scan", LaserScan, self.lidar_callback)
 
-        # self.speed_pub = rospy.Publisher('/speed', Float64, queue_size=1)
-        # self.steer_pub = rospy.Publisher('/steer', Float64, queue_size=1)
+        self.preprocess = Preprocess()
+        self.slidewindow = SlideWindow()
+        self.pidcal = PidCal()
 
         self.cam_sub = rospy.Subscriber('/image_jpeg/compressed', CompressedImage, self.cam_callback, queue_size=1)
 
@@ -23,7 +31,7 @@ class DynamicObstacle:
         self.speed_msg = Float64()
         self.steer_msg = Float64()
 
-        self.speed = 2400
+        self.speed = 1500
         self.steer = 0.5
 
     def lidar_callback(self, msg):
@@ -33,14 +41,16 @@ class DynamicObstacle:
 
         degrees = [degree_min + degree_angle_increment * index for index, value in enumerate(self.scan_msg.ranges)] 
 
-        for index, value in enumerate(self.scan_msg.ranges):
-            if abs(degrees[index]) < 50 and 0 < value < 1.6:
-                self.speed = 0
-            else:
-                self.speed = 2400
+        obstacle_degrees = []
 
-        # self.speed_pub.publish(self.speed)
-        # self.steer_pub.publish(self.steer)
+        for index, value in enumerate(self.scan_msg.ranges):
+            if (-40 < degrees[index] <= 5 and 0 < value < 1.25) or (-5 <= degrees[index] < 70 and 0 < value < 1.5):
+                obstacle_degrees.append(degrees[index])
+
+        if len(obstacle_degrees) != 0:
+            self.speed = 0
+        else: 
+            self.speed = 1500
 
 
     def cam_callback(self, data):
@@ -51,12 +61,8 @@ class DynamicObstacle:
             cv2.imshow("Slidinw window", slideing_img)
         cv2.waitKey(1)
         pid = self.pidcal.pid_control(x_location)
-        if self.line_flag == 'R':
-            steering = abs(pid - 0.5)
-            self.lane_steer = steering
-        else:
-            steering = abs(pid - 0.5)
-            self.lane_steer = steering
+        steering = abs(pid - 0.5)
+        self.steer = steering
 
     def lane_detection(self, img):
         img = self.preprocess.preprocess(img)
