@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import time, os, sys, rospy, tf, cv2
+import time, os, sys, rospy, tf, cv2, time
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from std_msgs.msg import Float64, Bool, Int16
 from morai_msgs.msg import CtrlCmd,GetTrafficLightStatus
@@ -38,6 +38,7 @@ class main_drive:
         self.line_flag = 'R'
         self.yaw = 0
         self.obstacle_mode = 0
+        self.prev_time = 0
 
         #image variable
         self.img = None
@@ -127,9 +128,10 @@ class main_drive:
         rotary_state = 0
         # while not rospy.is_shutdown():
         # print('img len : ', len(self.img))
-        print('flag : ', self.flag)
-        print('curve_flag : ', self.curve_detector.curve_flag)
-        print('yaw : ', self.yaw)
+        # print('flag : ', self.flag)
+        # print('curve_flag : ', self.curve_detector.curve_flag)
+        # print('line_flag : ', self.line_flag)
+        # print('speed : ', self.speed)
         # print('slam_end_flag : ', self.slam_end_flag)
         # CURVE-DETECT는 매 iteration마다 실행되어야함
         self.curve_detector.curve_detector(self.yaw)
@@ -144,42 +146,48 @@ class main_drive:
 
 
         elif self.flag == 1: # 장애물 감지 및 회피
-            if self.obstacle_mode == 0:
-                self.steer = self.lane_steer
+            self.steer = self.lane_steer
+            # if self.obstacle_mode == 0:
+            #     self.steer = self.lane_steer
             
-            elif self.obstacle_mode == 1:
-                self.static_obstacle = StaticObstacle()
-                self.steer = self.static_obstacle.steer
-                self.speed = self.static_obstacle.speed
-                if self.dynamic_obstacle is not None:
-                    self.dynamic_obstacle = None
+            # elif self.obstacle_mode == 1:
+            #     self.static_obstacle = StaticObstacle()
+            #     self.steer = self.static_obstacle.steer
+            #     self.speed = self.static_obstacle.speed
+            #     if self.dynamic_obstacle is not None:
+            #         self.dynamic_obstacle = None
 
-            elif self.obstacle_mode == 2:
-                self.dynamic_obstacle = DynamicObstacle()
-                self.steer = self.dynamic_obstacle.steer
-                self.speed = self.dynamic_obstacle.speed
-                if self.static_obstacle is not None:
-                    self.static_obstacle = None
-            # self.steer = self.lane_steer # for test!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
-            if self.curve_detector.curve_flag == 2 and self.obstacle_mode == 3:
-                del(self.static_obstacle)
-                del(self.dynamic_obstacle)
+            # elif self.obstacle_mode == 2:
+            #     self.dynamic_obstacle = DynamicObstacle()
+            #     self.steer = self.dynamic_obstacle.steer
+            #     self.speed = self.dynamic_obstacle.speed
+            #     if self.static_obstacle is not None:
+            #         self.static_obstacle = None
+            # # self.steer = self.lane_steer # for test!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+            # if self.curve_detector.curve_flag == 2 and self.obstacle_mode == 3:
+            if self.curve_detector.curve_flag == 2:
+                self.prev_time = time.time()
+            #     del(self.static_obstacle)
+            #     del(self.dynamic_obstacle)
                 self.flag = 2
 
 
 
 
-
-        elif self.flag == 2: # 좌회전(교차로, 로터리진입전)
+        elif self.flag == 2 and (time.time() - self.prev_time) >= 1.25: # 좌회전(교차로, 로터리진입전)
+            # print('time diff : ', time.time() - self.prev_time)
             self.line_flag = 'CL'
             self.steer = self.lane_steer
             if (0.68<self.yaw<0.77):
                 self.line_flag = 'R'
-                self.speed = 600
+                self.speed = 0
                 self.flag = 3
-
+        elif self.flag == 2:
+            self.steer = self.lane_steer
         
-        elif self.flag == 3: # 로터리 정지선 감지
+        if self.flag == 3: # 로터리 정지선 감지
+            self.steer = self.lane_steer
+            self.speed = 0
             if self.stop_line.isStop():
                 self.Rotary = Rotary()
                 self.flag = 4
@@ -237,10 +245,10 @@ class main_drive:
         
         elif self.flag == 10: # 정지
             return
-        
+        print('speed latest : ', self.speed)
         self.steer_pub.publish(self.steer)
         self.speed_pub.publish(self.speed)
-            
+        
 
 def run():
     rospy.init_node('main_drive', anonymous=True) 

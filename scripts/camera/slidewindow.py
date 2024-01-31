@@ -94,7 +94,7 @@ class SlideWindow:
                 good_right_inds = ((nonzerox >= R_win_x_l) & (nonzeroy >= R_win_y_l  ) &(nonzeroy <= R_win_y_h) & (nonzerox <= R_win_x_h)).nonzero()[0]
                 if len(good_right_inds) > 0:
                     rx_current = np.int(np.mean(nonzerox[good_right_inds]))
-                x_location = rx_current - width*0.25
+                x_location = rx_current - width*0.225
             
             elif line_flag == 'L':
                 L_win_x_l = lx_current - margin
@@ -119,7 +119,7 @@ class SlideWindow:
                 if len(good_cleft_inds) > 0:
                     clx_current = np.int(np.mean(nonzerox[good_cleft_inds]))
                 
-                x_location = clx_current + width*0.17
+                x_location = clx_current + width*0.2
     
         
         
