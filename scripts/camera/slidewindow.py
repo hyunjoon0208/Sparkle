@@ -123,6 +123,6 @@ class SlideWindow:
     
         
         
-        print('x_location : ', x_location)
+        # print('x_location : ', x_location)
         return out_img, x_location, line_flag
 

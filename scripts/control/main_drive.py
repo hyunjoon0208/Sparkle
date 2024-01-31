@@ -141,16 +141,10 @@ class main_drive:
     def drive(self):
         rotary_state = 0
         # while not rospy.is_shutdown():
-        # print('img len : ', len(self.img))
-        # print('flag : ', self.flag)
-        # print('curve_flag : ', self.curve_detector.curve_flag)
-<<<<<<< HEAD
-        # print('line_flag : ', self.line_flag)
-        # print('speed : ', self.speed)
-=======
-        # print('yaw : ', self.yaw)
->>>>>>> 39232abd29edf37af7491598c55b44998a5d740c
-        # print('slam_end_flag : ', self.slam_end_flag)
+        print('img len : ', len(self.img))
+        print('flag : ', self.flag)
+        print('curve_flag : ', self.curve_detector.curve_flag)
+        print('slam_end_flag : ', self.slam_end_flag)
         # CURVE-DETECT는 매 iteration마다 실행되어야함
         self.curve_detector.curve_detector(self.yaw)
         # slam 종료신호 받아야함!
@@ -164,7 +158,6 @@ class main_drive:
 
 
         elif self.flag == 1: # 장애물 감지 및 회피
-<<<<<<< HEAD
             self.steer = self.lane_steer
             # if self.obstacle_mode == 0:
             #     self.steer = self.lane_steer
@@ -175,7 +168,6 @@ class main_drive:
             #     self.speed = self.static_obstacle.speed
             #     if self.dynamic_obstacle is not None:
             #         self.dynamic_obstacle = None
-=======
             if self.obstacle_mode == 0:
                 self.steer = self.lane_steer
             elif self.obstacle_mode == 1:
@@ -196,8 +188,6 @@ class main_drive:
                 del(self.static_obstacle)
                 del(self.dynamic_obstacle)
                 self.flag = 2
->>>>>>> 39232abd29edf37af7491598c55b44998a5d740c
-
             # elif self.obstacle_mode == 2:
             #     self.dynamic_obstacle = DynamicObstacle()
             #     self.steer = self.dynamic_obstacle.steer
@@ -212,15 +202,9 @@ class main_drive:
             #     del(self.dynamic_obstacle)
                 self.flag = 2
 
-<<<<<<< HEAD
-
-
 
         elif self.flag == 2 and (time.time() - self.prev_time) >= 1.25: # 좌회전(교차로, 로터리진입전)
             # print('time diff : ', time.time() - self.prev_time)
-=======
-        elif self.flag == 2: # 좌회전(교차로, 로터리진입전)
->>>>>>> 39232abd29edf37af7491598c55b44998a5d740c
             self.line_flag = 'CL'
             self.steer = self.lane_steer
             if (0.68<self.yaw<0.77):
