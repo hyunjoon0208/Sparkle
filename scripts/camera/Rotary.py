@@ -11,6 +11,7 @@ from .Preprocess import Preprocess
 from .StopDetector import stop_line
 from .slidewindow import SlideWindow
 from control.pidcal import PidCal
+from .StopDetector import stop_line
 
 class Rotary:
     def __init__(self) -> None:
@@ -28,8 +29,11 @@ class Rotary:
         self.exit_yaw = 0.90
         self.straight_yaw = -1.0
         self.yaw = 0
+        self.prev_time = 0
+        self.total_movement = 0
         self.preprocess = Preprocess()
         self.slidewindow = SlideWindow()
+        self.stop_detector = stop_line()
         self.pidcal = PidCal()
         self.Imu_sub = rospy.Subscriber('/imu', Imu, self.Imu_callback, queue_size=1)
         self.Lidar_sub = rospy.Subscriber('/scan', LaserScan, self.Lidar_callback, queue_size=1)
@@ -45,8 +49,9 @@ class Rotary:
 
     def img_callback(self, data):
         self.img = cv2.imdecode(np.fromstring(data.data, np.uint8),cv2.IMREAD_COLOR)
+        self.img = self.preprocess.preprocess(self.img)
         try:
-            pid = self.pidcal.pid_control(self.slidewindow.slidewindow(self.preprocess.preprocess(self.img),'L'))
+            pid = self.pidcal.pid_control(self.slidewindow.slidewindow(self.img, 'L'))
         except:
             pid = None
         if pid is None:
@@ -71,7 +76,7 @@ class Rotary:
             self.obstacle_detected = False
         
         # Check for obstacles in the front
-        front_car_degrees = [self.degrees[i] for i in range(len(self.scan.ranges)) if self.scan.ranges[i] < 0.4 and abs(self.degrees[i]) < 25]
+        front_car_degrees = [self.degrees[i] for i in range(len(self.scan.ranges)) if self.scan.ranges[i] < 0.7 and abs(self.degrees[i]) < 55]
         if len(front_car_degrees) > 0:
             self.front_car_detected = True
         else:
@@ -91,7 +96,7 @@ class Rotary:
         
         center = ((nonzerox >= center_left_x) & (nonzerox <= center_right_x) & (nonzeroy >= center_high_y) & (nonzeroy <= center_low_y)).nonzero()[0]
         print("center_num : ", len(center))
-        if len(center) > 5000 and self.front_car_detected == False:
+        if len(center) > 5000 and self.front_car_detected == False and self.obstacle_detected == False:
             self.center_detected = True
         else:
             self.center_detected = False
@@ -136,23 +141,42 @@ class Rotary:
                     print('no obstacle_detected & Let\'s go')
                     self.state = 1
                     self.speed = 400
-                    self.find_center()
+                    # self.find_center()
 
                 elif self.obstacle_detected == True:
                     self.speed = 0
                     self.state = 0
             if self.state == 1:
-                self.find_center()
-                if self.center_detected == True and self.obstacle_detected == False and self.front_car_detected == False:
+                self.stop_detector.isStop(self.img)
+                if self.obstacle_detected == True or self.front_car_detected == True:
                     self.speed = 0
-                    self.state = 2
-                else:
-                    self.speed = 400
                     self.state = 1
-                    self.steer = 0.5
-                    self.find_center()
+                else:
+                    if self.stop_detector.stop_line_detected == True:
+                        self.prev_time = time.time()
+                        self.total_movement = self.prev_time
+                        self.speed = 400
+                        self.state = 2
+                        self.steer = 0.5
+                        self.stop_detector.isStop(self.img)
 
+                '''
+
+                스탑라인 플래그 초기화 시키기!!!스탑라인 플래그 초기화 시키기!!!스탑라인 플래그 초기화 시키기!!!스탑라인 플래그 초기화 시키기!!!스탑라인 플래그 초기화 시키기!!!스탑라인 플래그 초기화 시키기!!!
+                스탑라인 플래그 초기화 시키기!!!스탑라인 플래그 초기화 시키기!!!스탑라인 플래그 초기화 시키기!!!스탑라인 플래그 초기화 시키기!!!스탑라인 플래그 초기화 시키기!!!
+                스탑라인 플래그 초기화 시키기!!!스탑라인 플래그 초기화 시키기!!!스탑라인 플래그 초기화 시키기!!!스탑라인 플래그 초기화 시키기!!!스탑라인 플래그 초기화 시키기!!!
+
+                '''
+                
+                
             if self.state == 2:
+                
+                if time.time() - self.total_movement < 0.75 and self.front_car_detected == False:
+                    self.speed = 400
+                    self.steer = 0.5
+                    self.state = 2
+                elif time.time() - self.prev_time < 0.75 and self.front_car_detected == True:
+                    self.total_movement = time.time() - self.prev_time #############고쳐야함################
                 if 0.915 <= abs(self.yaw) <= 0.925:
                     if self.front_car_detected == True:
                         self.speed = 0
@@ -162,28 +186,33 @@ class Rotary:
                         self.steer = 0.5
                         self.state = 3
                 else:
-                    self.speed = 600
-                    error = round(self.yaw,3) - 0.919
                     if self.front_car_detected == True:
                         self.speed = 0
-                    elif abs(error) > 0.005: 
-                        if error < 0:
-                            self.steer = min(1, self.steer * 1.1)
-                            print('1111111111')
-                        else:
-                            print('22222222222')
-                            self.steer = max(0, self.steer * 0.8)
-                        print('steer : ', self.steer)
+                    else:
+                        self.speed = 400
+                        error = round(self.yaw,3) - 0.913 #0.9134914875030518
+                        if self.front_car_detected == True:
+                            self.speed = 0
+                        elif abs(error) > 0.0005: 
+                            if error < 0:
+                                self.steer = min(1, self.steer * 1.0125)
+                                print('1111111111')
+                            else:
+                                print('22222222222')
+                                self.steer = max(0, self.steer * 0.8)
+                            print('steer : ', self.steer)
                     # self.find_center()
 
             if self.state ==3:
                 if self.front_car_detected == True:
                         self.speed = 0
-                self.find_yellow_lane()
-                # if self.yellow_lane_detected == True and self.left_lane_detected == True:
-                if self.yellow_lane_detected == True:
-                    self.state = 4
-                    break
+                else:
+                    self.speed = 600
+                    self.find_yellow_lane()
+                    # if self.yellow_lane_detected == True and self.left_lane_detected == True:
+                    if self.yellow_lane_detected == True:
+                        self.state = 4
+                        break
             
         return self.state
 

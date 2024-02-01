@@ -61,11 +61,32 @@ class Warper:
             [w*(0.25), h],
         ])
 
+
+        self.CR_src = np.float32([
+            [0,h*0.56],
+            [w, h*0.56],
+            [w,h],
+            [0, h],
+        ])
+
+
+        self.CR_dst = np.float32([
+            [w*(-0.5),0],
+            [w*(1.5), 0],
+            [w*(0.6),h],
+            [w*(0.15), h],
+        ])
+
+
         self.CLM = cv2.getPerspectiveTransform(self.CL_src, self.CL_dst)
         self.CLMinv = cv2.getPerspectiveTransform(self.CL_dst, self.CL_src)
 
         self.M = cv2.getPerspectiveTransform(self.src, self.dst)
         self.Minv = cv2.getPerspectiveTransform(self.dst, self.src)
+
+        self.CRM = cv2.getPerspectiveTransform(self.CR_src, self.CR_dst)
+        self.CRMinv = cv2.getPerspectiveTransform(self.CR_dst, self.CR_src)
+
 
     def warp(self, img):
         return cv2.warpPerspective(
@@ -90,3 +111,12 @@ class Warper:
             (img.shape[1], img.shape[0]),
             flags=cv2.INTER_LINEAR
         )
+    
+    def right_warp(self, img):
+        return cv2.warpPerspective(
+            img,
+            self.CRM,
+            (img.shape[1], img.shape[0]),
+            flags=cv2.INTER_LINEAR
+        )
+    

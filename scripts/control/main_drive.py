@@ -104,6 +104,18 @@ class main_drive:
             self.lane_steer = steering
             if steering < 0.5:
                 steering *= 1.2
+        elif self.line_flag == 'CL2':
+            pid = self.pidcal.curve_pid_control2(x_location)
+            steering = abs(pid - 0.5)
+            self.lane_steer = steering
+            if steering < 0.5:
+                steering *= 1.2
+        elif self.line_flag == 'CR':
+            pid = self.pidcal.curve_pid_control2(x_location)
+            steering = abs(pid - 0.5)
+            self.lane_steer = steering
+            if steering > 0.5:
+                steering *= 1.2
             
     def Imu_callback(self, msg):
         self.yaw = abs(msg.orientation.z)
@@ -134,7 +146,32 @@ class main_drive:
         self.img = self.preprocess.preprocess(img, self.line_flag)
         slideimg, x_location , self.line_flag = self.slidewindow.slidewindow(self.img,self.line_flag)
         return slideimg, x_location
-        
+    
+    def find_yellow_lane(self):
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++')
+        img = self.preprocess.find_yellow(self.img)
+        if img is None:
+            return
+        nonzero = img.nonzero()
+        # nonzeroy = np.array(nonzero[0])
+        # nonzerox = np.array(nonzero[1])
+        # center_left_x = 240
+        # center_right_x = 400
+        # center_high_y = 280
+        # center_low_y = 320
+
+        # pts = np.array([[center_left_x,center_high_y],[center_left_x,center_low_y],[center_right_x, center_low_y],[center_right_x,center_high_y]],np.int32)
+        # cv2.polylines(img, [pts], False, (0,255,0), 1)
+        # cv2.imshow("yellow", img)
+        # cv2.waitKey(1)
+        # yellow_lane = ((nonzerox >= center_left_x) & (nonzerox <= center_right_x) & (nonzeroy >= center_high_y) & (nonzeroy <= center_low_y)).nonzero()[0]
+        # print("yellow_lane_num : ", len(yellow_lane))
+        print('nonzero : ', len(nonzero))
+        if len(nonzero) > 2:
+            self.yellow_lane_detected = True
+        else:
+            self.yellow_lane_detected = False
+
     # main drive
     def drive(self):
         self.steer_pub.publish(self.steer)
@@ -203,11 +240,12 @@ class main_drive:
 
         if self.flag == 2:
             self.steer = self.lane_steer
-            if (time.time() - self.prev_time) >= 1.275: # 좌회전(교차로, 로터리진입전)
+            if (time.time() - self.prev_time) >= 1.275: # 좌회전(교차로, 로터리진입전)1.275
                 # print('time diff : ', time.time() - self.prev_time)
                 self.line_flag = 'CL'
+                self.speed = 1700
                 self.steer = self.lane_steer
-                if (0.68<self.yaw<0.8):
+                if (0.70<self.yaw<0.75):
                     self.line_flag = 'R'
                     self.flag = 3
         
@@ -245,11 +283,13 @@ class main_drive:
             self.line_flag = 'L'
             self.steer = self.lane_steer
             self.speed = 1400
-
-            self.stop_line.isStop(self.img)
-            if self.stop_line.stop_line_detected:
+            if 0.9999 <= self.yaw <= 1:
+                self.steer = 0.5
+                print('STOP LINE DETECTING')
+                if self.stop_line.fast_stop_line_detected == False:
+                    self.stop_line.isFastStop(self.img)
+            if self.stop_line.fast_stop_line_detected:
                 self.speed = 0
-                self.line_flag = 'CL'
                 self.steer = self.lane_steer
                 print('traffic light status : ', self.traffic_light_status)
                 print('is_left_turn : ', self.is_left_turn)
@@ -258,46 +298,88 @@ class main_drive:
                     self.flag = 6
 
         elif self.flag == 6: # 차선변경
+            
             if time.time() - self.prev_time < 1:
                 print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~직진중~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-                self.steer = 0.5
+                self.steer = 0.35
                 self.speed = 600
             else:
+                self.line_flag = 'CL2'
                 self.steer = self.lane_steer
                 if 0.69<self.yaw < 0.72:
-                    self.line_flag = 'R'
+                    self.line_flag = 'CR'
                     self.steer = self.lane_steer
                     self.flag = 7
                     # self.stop_line.isStop(self.img)
                     # if self.stop_line.stop_line_detected:
                     #     self.flag = 7
 
-            
-
-
-
                     
         elif self.flag == 7: # 정지선 검출
-            self.line_flag = 'R'
+            self.speed = 1000
+            self.line_flag = 'CR'
             self.steer = self.lane_steer
             print('self.line_flag : ', self.line_flag)
             print('self.lane_steer : ', self.lane_steer)
+            # if self.find_yellow_lane():
+            #     self.flag = 8
+            #     self.line_flag = 'CL'
+            if 0.999 < self.yaw < 1:
+                self.flag = 8
+                self.line_flag = 'L'
+                self.steer = self.lane_steer
+                self.stop_line.fast_stop_line_detected = False
+        if self.flag == 8: # 달려
+            self.speed = 1700
+            print('self.line_flag : ', self.line_flag)
+            self.line_flag = 'L'
             self.steer = self.lane_steer
-        elif self.flag == 8: # 달려
-            if self.stop_line.isStop():
+            if 0.67 < self.yaw < 0.73:
+                self.stop_line.isFastStop(self.img)
+
+            if self.stop_line.fast_stop_line_detected:
+                self.steer = self.lane_steer
                 self.flag = 9
-                first = time.time()
-            pass
-        elif self.flag == 9: # 정지선 검출 
-            if self.stop_line.isStop():
+                self.prev_time = time.time()
+            else:
+                print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!STOP LINE NOT DETECTED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        elif self.flag == 9: # 정지선 검출
+            if time.time() - self.prev_time < 1.9:
+                error = round(self.yaw,3) - 0.7
+                if abs(error) > 0.0005: 
+                    # if error < 0:
+                    #     self.steer = min(0.45, self.steer * 1.001)
+                    #     print('1111111111')
+                    # else:
+                    #     print('22222222222')
+                    #     self.steer = max(0.55, self.steer * 0.79)
+                    self.steer += error * 0.2225
+                    print('steer : ', self.steer)
+                else:
+                    self.steer = 0.5
+            else:
                 self.flag = 10
-                first = time.time()
-            if time.time() - first > 2:
-                self.speed = 0
-        
+
         elif self.flag == 10: # 정지
-            return
-        
+            self.steer = self.lane_steer
+            self.line_flag = 'L'
+
+            self.stop_line.isStop(self.img)
+            if  0 < self.yaw <0.1 and self.stop_line.stop_line_detected:
+                # self.speed = 0
+                self.steer = self.lane_steer
+                self.flag = 11
+                self.prev_time = time.time()
+            self.speed = 2000
+            
+        if self.flag == 11:
+            if time.time() - self.prev_time < 1.5:
+                self.steer = self.lane_steer
+                self.speed = 2400
+            else:
+                self.speed = 0
+                print('FINISH!!!!!!!!!!!FINISH!!!!!!!!!!!FINISH!!!!!!!!!!!FINISH!!!!!!!!!!!FINISH!!!!!!!!!!!FINISH!!!!!!!!!!!FINISH!!!!!!!!!!!')
+                return 
 
 def run():
     rospy.init_node('main_drive', anonymous=True) 

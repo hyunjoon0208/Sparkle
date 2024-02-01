@@ -5,9 +5,11 @@ class PidCal:
     error_old = 0
     p = [0.000699, 0.000001, 0.00001] # optimized kp,ki,kd
     curve_p = [0.00215, 0.000001, 0.00001]
+    curve_p2 = [0.0031, 0.000001, 0.00001]
     # p = [0.001, 0.0000003, 0.003]
     dp = [p[0]/10, p[1]/10, p[2]/10] # to twiddle kp, ki, kd
     curve_dp = [curve_p[0]/10, curve_p[1]/10, curve_p[2]/10]
+    curve_dp2 = [curve_p2[0]/10, curve_p2[1]/10, curve_p2[2]/10]
 
     def __init__(self):
         # print "init PidCal"
@@ -104,6 +106,24 @@ class PidCal:
         self.error_sum += error
         i1 = round(self.curve_p[1] * self.error_sum, 9)
         d1 = round(self.curve_p[2] * (error -  self.error_old), 9)
+        self.error_old = error
+        pid = p1 +i1+ d1
+        # pid = p1 + d1
+        # pid = p1 + d1
+        # print("p : " ,p)
+        # print("i : " ,i)
+        # print("d : " ,d)
+        return pid
+    
+    def curve_pid_control2(self, x_current, setpoint=320):
+        self.x = int(x_current)
+        self.twiddle()
+
+        error = setpoint - x_current
+        p1 = round(self.curve_p2[0] * error, 9)
+        self.error_sum += error
+        i1 = round(self.curve_p2[1] * self.error_sum, 9)
+        d1 = round(self.curve_p2[2] * (error -  self.error_old), 9)
         self.error_old = error
         pid = p1 +i1+ d1
         # pid = p1 + d1

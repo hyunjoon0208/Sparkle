@@ -14,8 +14,10 @@ class Preprocess:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         img = cv2.inRange(img, 100, 255)
         
-        if warp_flag == 'CL':
+        if warp_flag == 'CL' or warp_flag == 'CL2':
             warp_img = self.warper.left_warp(img)
+        elif warp_flag == 'CR':
+            warp_img = self.warper.right_warp(img)
         else:
             warp_img = self.warper.warp(img)
         # img = cv2.GaussianBlur(img, (3,3), 0)
