@@ -8,6 +8,7 @@ class stop_line():
         # rospy.init_node('stop_line', anonymous=True)
         # self.stop_pub = rospy.Publisher('/stop_line', Bool, queue_size=1)
     def isStop(self,img):
+        print('self.stop_line_detected :',self.stop_line_detected)
         # binary -> find contours -> find stop line
         # out_img = np.dstack((img, img, img))
         if img is not None:
@@ -22,7 +23,7 @@ class stop_line():
             stop_line = ((nonzerox >= stop_left_x) & (nonzerox <= stop_right_x) & (nonzeroy >= stop_high_y) & (nonzeroy <= stop_low_y)).nonzero()[0]
             # out_img = cv2.polylines(out_img, [pts], True, (0,255,0), 1)
             print("stop_line_num : ", len(stop_line))
-            if len(stop_line) > 10000:
+            if len(stop_line) > 8000:
                 self.stop_line_detected = True
             else:
                 self.stop_line_detected = False

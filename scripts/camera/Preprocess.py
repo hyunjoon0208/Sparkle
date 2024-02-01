@@ -32,8 +32,4 @@ class Preprocess:
         except:
             finded = None
 
-            
-        if finded is not None:
-            return True, finded
-        else:
-            return False, None
+        return finded

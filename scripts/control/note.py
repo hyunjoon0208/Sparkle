@@ -33,7 +33,7 @@ class main_drive:
         self.dynamic_obstacle = None
 
         #numeric variable
-        self.flag = 2
+        self.flag = 1
         self.curve_counter = 0
         self.line_flag = 'R'
         self.yaw = 0
@@ -260,17 +260,13 @@ class main_drive:
         elif self.flag == 6: # 차선변경
             if time.time() - self.prev_time < 1:
                 print('~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~직진중~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~')
-                self.steer = 0.5
+                self.steer = 0.35
                 self.speed = 600
             else:
-                self.steer = self.lane_steer
-                if 0.69<self.yaw < 0.72:
+                if 0.69<self.yaw < 0.71:
                     self.line_flag = 'R'
                     self.steer = self.lane_steer
                     self.flag = 7
-                    # self.stop_line.isStop(self.img)
-                    # if self.stop_line.stop_line_detected:
-                    #     self.flag = 7
 
             
 

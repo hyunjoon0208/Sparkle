@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import rospy, cv2, sys, os
+import rospy, cv2, sys, os, time
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 import numpy as np
 import morai_msgs.msg as CtrlCmd
@@ -14,12 +14,14 @@ from control.pidcal import PidCal
 
 class Rotary:
     def __init__(self) -> None:
-        rospy.init_node('rotary', anonymous=True)
+        # rospy.init_node('rotary', anonymous=True)
 
         self.obstacle_detected = True
         self.front_car_detected = True
         self.center_detected = True
         self.yellow_lane_detected = False
+        self.straight_stop = False
+        self.straight_time = 0
         self.state = 0
         self.speed = 1000
         self.steer = 0.5
@@ -32,23 +34,25 @@ class Rotary:
         self.Imu_sub = rospy.Subscriber('/imu', Imu, self.Imu_callback, queue_size=1)
         self.Lidar_sub = rospy.Subscriber('/scan', LaserScan, self.Lidar_callback, queue_size=1)
         self.sub = rospy.Subscriber('/image_jpeg/compressed', CompressedImage, self.img_callback, queue_size=1)
-        self.stop_detector = stop_line()
-        self.speed_pub = rospy.Publisher('/speed', Float64, queue_size=1)
-        self.steer_pub = rospy.Publisher('/steer', Float64, queue_size=1)
+
+        self.speed_pub = rospy.Publisher('/commands/motor/speed', Float64, queue_size=1)
+        self.steer_pub = rospy.Publisher('/commands/servo/position', Float64, queue_size=1)
         self.degrees = []
-        self.lane_steer = 0.5
+        self.lane_steer = None
         self.line_flag = 'R'
         self.img = None
+        self.left_lane_detected = False
 
     def img_callback(self, data):
         self.img = cv2.imdecode(np.fromstring(data.data, np.uint8),cv2.IMREAD_COLOR)
-        pid = self.pidcal.pid_cal(self.slidewindow.slidewindow(self.preprocess.preprocess(self.img),'R'))
-        if self.line_flag == 'R':
-            steering = abs(pid - 0.5)
-            self.lane_steer = steering
+        try:
+            pid = self.pidcal.pid_control(self.slidewindow.slidewindow(self.preprocess.preprocess(self.img),'L'))
+        except:
+            pid = None
+        if pid is None:
+            self.left_lane_detected = False
         else:
-            steering = abs(pid - 0.5)
-            self.lane_steer = steering
+            self.left_lane_detected = True
     def Imu_callback(self, msg):
         self.yaw = msg.orientation.z
     
@@ -60,14 +64,14 @@ class Rotary:
         self.degrees = [degree_min + degree_increment * i for i in range(len(self.scan.ranges))]
 
         # Check for obstacles in the rotary
-        obstacle_degrees = [self.degrees[i] for i in range(len(self.scan.ranges)) if 0.5 < self.scan.ranges[i] < 1.5 and -10 < self.degrees[i]]
+        obstacle_degrees = [self.degrees[i] for i in range(len(self.scan.ranges)) if self.scan.ranges[i] < 1 and -5 < self.degrees[i] < 70]
         if len(obstacle_degrees) > 0:
             self.obstacle_detected = True
         else:
             self.obstacle_detected = False
         
         # Check for obstacles in the front
-        front_car_degrees = [self.degrees[i] for i in range(len(self.scan.ranges)) if self.scan.ranges[i] < 0.5 and abs(self.degrees[i]) < 10]
+        front_car_degrees = [self.degrees[i] for i in range(len(self.scan.ranges)) if self.scan.ranges[i] < 0.4 and abs(self.degrees[i]) < 25]
         if len(front_car_degrees) > 0:
             self.front_car_detected = True
         else:
@@ -82,32 +86,37 @@ class Rotary:
         nonzerox = np.array(nonzero[1])
         center_left_x = 240
         center_right_x = 400
-        center_high_y = 200
-        center_low_y = 320
+        center_high_y = 0
+        center_low_y = 240
         
         center = ((nonzerox >= center_left_x) & (nonzerox <= center_right_x) & (nonzeroy >= center_high_y) & (nonzeroy <= center_low_y)).nonzero()[0]
         print("center_num : ", len(center))
-        if len(center) > 5000:
+        if len(center) > 5000 and self.front_car_detected == False:
             self.center_detected = True
         else:
             self.center_detected = False
 
     def find_yellow_lane(self):
+        print('+++++++++++++++++++++++++++++++++++++++++++++++++++++++')
         img = self.preprocess.find_yellow(self.img)
         if img is None:
             return
         nonzero = img.nonzero()
-        nonzeroy = np.array(nonzero[0])
-        nonzerox = np.array(nonzero[1])
-        center_left_x = 240
-        center_right_x = 400
-        center_high_y = 280
-        center_low_y = 320
-        cv2.imshow("yellow", img)
-        cv2.waitKey(1)
-        yellow_lane = ((nonzerox >= center_left_x) & (nonzerox <= center_right_x) & (nonzeroy >= center_high_y) & (nonzeroy <= center_low_y)).nonzero()[0]
-        print("yellow_lane_num : ", len(yellow_lane))
-        if len(yellow_lane) > 2000:
+        # nonzeroy = np.array(nonzero[0])
+        # nonzerox = np.array(nonzero[1])
+        # center_left_x = 240
+        # center_right_x = 400
+        # center_high_y = 280
+        # center_low_y = 320
+
+        # pts = np.array([[center_left_x,center_high_y],[center_left_x,center_low_y],[center_right_x, center_low_y],[center_right_x,center_high_y]],np.int32)
+        # cv2.polylines(img, [pts], False, (0,255,0), 1)
+        # cv2.imshow("yellow", img)
+        # cv2.waitKey(1)
+        # yellow_lane = ((nonzerox >= center_left_x) & (nonzerox <= center_right_x) & (nonzeroy >= center_high_y) & (nonzeroy <= center_low_y)).nonzero()[0]
+        # print("yellow_lane_num : ", len(yellow_lane))
+        print('nonzero : ', len(nonzero))
+        if len(nonzero) > 2:
             self.yellow_lane_detected = True
         else:
             self.yellow_lane_detected = False
@@ -115,87 +124,66 @@ class Rotary:
     
     def run(self):
         while not rospy.is_shutdown():
+            self.speed_pub.publish(self.speed)
+            self.steer_pub.publish(self.steer)
             print('state : ', self.state)
             if self.state <=1 and self.obstacle_detected == True:
                 print('obstacle_detected')
                 self.state = 0
-            if self.state == 0 and self.obstacle_detected == False:
-                print('no obstacle_detected & Let\'s go')
-                self.state = 1
-                self.find_center()
-            if self.state == 1 and self.center_detected == False:
-                print('center_not_detected')
-                self.find_center()
-                # self.state = 1
-                
-            if self.state == 1 and self.center_detected == True:
-                print('center_detected & Let\'s go')
-                self.state = 2
-            
-            # if self.state == 2 and 0.85<self.yaw<0.95:
-            #     print('exit_yaw')
-            #     self.state = 3
-            #     # 
-
-            # if self.state == 2 and self.front_car_detected == True:
-            #     print('front_car_detected')
-            #     # self.state = 2
-            #     self.speed = 0
-                
-            # if self.state == 2 and self.front_car_detected == False:
-            #     print('no front_car_detected & Let\'s go')
-            #     print('lane detection')
-            #     print('yaw : ', self.yaw)
-            if self.state == 2 and self.front_car_detected == True:
-                print('front_car_detected')
                 self.speed = 0
-            if self.state == 2 and self.front_car_detected == False:
-                if 0.925 <= abs(self.yaw) <= 0.935:
-                    print('exit_yaw')
-                    self.state = 3
-                    self.steer = 0.5
+            elif self.state == 0:
+                if self.obstacle_detected == False:
+                    print('no obstacle_detected & Let\'s go')
+                    self.state = 1
+                    self.speed = 400
+                    self.find_center()
+
+                elif self.obstacle_detected == True:
+                    self.speed = 0
+                    self.state = 0
+            if self.state == 1:
+                self.find_center()
+                if self.center_detected == True and self.obstacle_detected == False and self.front_car_detected == False:
+                    self.speed = 0
+                    self.state = 2
                 else:
-                    error = round(self.yaw,2) - 0.93
-                    if abs(error) > 0.005: 
-                        if error > 0:
-                            self.steer = 0.25
+                    self.speed = 400
+                    self.state = 1
+                    self.steer = 0.5
+                    self.find_center()
+
+            if self.state == 2:
+                if 0.915 <= abs(self.yaw) <= 0.925:
+                    if self.front_car_detected == True:
+                        self.speed = 0
+                    else:
+                        self.speed = 600
+                        print('exit_yaw')
+                        self.steer = 0.5
+                        self.state = 3
+                else:
+                    self.speed = 600
+                    error = round(self.yaw,3) - 0.919
+                    if self.front_car_detected == True:
+                        self.speed = 0
+                    elif abs(error) > 0.005: 
+                        if error < 0:
+                            self.steer = min(1, self.steer * 1.1)
+                            print('1111111111')
                         else:
-                            self.steer = 0.75
+                            print('22222222222')
+                            self.steer = max(0, self.steer * 0.8)
                         print('steer : ', self.steer)
-            if self.state == 3:
+                    # self.find_center()
+
+            if self.state ==3:
+                if self.front_car_detected == True:
+                        self.speed = 0
                 self.find_yellow_lane()
+                # if self.yellow_lane_detected == True and self.left_lane_detected == True:
                 if self.yellow_lane_detected == True:
                     self.state = 4
-                    self.speed = 0
-                    self.steer = 0.5
-                    self.straight_yaw = self.yaw
-                    print('straight_yaw : ', self.straight_yaw)
-                    
-            if self.state == 4 and self.yellow_lane_detected == False:
-                #lane change
-                # self.steer = 0.3
-                self.find_yellow_lane()
-                
-            elif self.state == 4 and self.yellow_lane_detected == True:
-                pass
-                
+                    break
             
-            if self.state == 5:
-                if self.stop_detector.isStop(self.img):
-                    print('stop line detected')
-                    self.speed = 0
-                    self.state = 6
-                    print('DONE ROTARY')
-                    
-            
-            
-        # return self.speed, self.steer, self.state
+        return self.state
 
-
-if __name__ == '__main__':
-    try:
-        print('ROTARY')
-        rotary = Rotary()
-        rotary.run()
-    except rospy.ROSInterruptException:
-        pass
