@@ -1,0 +1,23 @@
+footprint: [[-0.1, -0.1], [-0.1, 0.1],[0.3, 0.1], [0.3, -0.1]] # footprint : 로봇의 형상 / baselink 기준의 로봇의 형상임
+footprint_padding: 0.02 # 로봇 형상의 여유분
+
+#robot_radius: ir_of_robot
+# inflation_radius: 0.45 # inflation 영역의 크기
+
+transform_tolerance: 0.2 # transform error를 안띄우기 위해서 얼마나 offset, timeout 값을 줄것인지 결정
+
+# global, local에서 세팅
+# obstacle_range: 2.5
+# raytrace_range: 3.0
+
+map_type: costmap
+
+inflation_layer:
+  enabled:              true
+  cost_scaling_factor:  10.0 # exponential rate at which the obstacle cost drops off {default: 10.0}
+  inflation_radius:     0.2 # can try this -> 0.4 test하면서 바꾸기 # max. distance from an obstacle at which costs are incurred for planning paths. 40cm의 추가 inflation을 주겠다.
+  inflation_unknow:     true
+
+static layer:
+  enabled:              true
+  map_topic:            "/map"

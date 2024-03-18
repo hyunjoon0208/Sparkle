@@ -1,0 +1,10 @@
+<launch>
+    <node pkg="tf2_ros" type="static_transform_publisher" name="base_link_to_imu"
+        args="0.0 0.0 0.12 0.0 0.0 0.0 1.0 base_link imu"/>
+    <node pkg="tf2_ros" type="static_transform_publisher" name="base_link_to_lidar"
+        args="0.11 0.0 0.13 0.0 0.0 0.0 1.0 base_link lidar"/>
+    
+    <node pkg="Sparkle" type="lidar_convert" name="lidar_convert" />
+
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find Sparkle)/rviz/display.rviz"/>
+</launch>

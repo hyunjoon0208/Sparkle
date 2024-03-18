@@ -1,0 +1,6 @@
+<launch>
+    <node name = "turtlesim_node" pkg="turtlesim" type="turtlesim_node"/>
+    <node name = "carrot_broadcaster" pkg = "learning_tf" type = "carrot_broadcaster.py"/>
+    <node name = "turtle_one_broadcaster" pkg = "learning_tf" type = "turtle_one_broadcaster.py"/>
+    <node name = "turtle_two_broadcaster" pkg = "learning_tf" type = "turtle_two_broadcaster.py"/>
+</launch>
